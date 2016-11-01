@@ -18,7 +18,7 @@
 /* Ray structure */
 typedef struct {
    vec3f vector; // Ray vector ( should be normalized )
-   vec2f posn; // X, Y pixel coordinates
+   vec3f posn; // starting position of vector
 } Ray;
 
 /* RayHit structure */
@@ -106,9 +106,20 @@ void referenceGeometry() {
 
 }
 
-/* Checks for intersection between a triangle and a ray */
-void sphere_intersect(RayHit * rayHit) {
+/* Get a normal to a sphere give a sphere index and the point on the sphere */
+vec3f normalSphere( vec3f coords, int sphereIndex ) {
+	if( sphereIndex > sphere_index) {
+		return vec3(0, 0, 0);
+	}
+	vec3f center = sph[sphereIndex].pos;
+	vec3f result = normalize(vec3_sub(coords, center));
+	return result;
+}
 
+/* Checks for intersection between a triangle and a ray */
+int sphere_intersect(RayHit * rayHit) {
+
+	int retVal = 0;
 	float time0 = -1;
 	float time1 = -1;
 	float trueTime;
@@ -129,17 +140,21 @@ void sphere_intersect(RayHit * rayHit) {
 			trueTime = time0 < time1 ? time0 : time1;
 			if( trueTime < rayHit->time || rayHit->time < 0 ) {
 				rayHit->time = trueTime;
-				if( rayHit->ray.posn.x == 250 && rayHit->ray.posn.y == 250)
-					printf("Coord %f %f sphere[%d]: time is %f\n", rayHit->ray.posn.x, rayHit->ray.posn.y, i, time0);
 				rayHit->color = sph[i].mat.color;
+				rayHit->reflective = sph[i].mat.reflective;
+				rayHit->hitPoint = vec3_add(rayHit->ray.posn, scalar_mult(rayHit->time, rayHit->ray.vector));
+				rayHit->normal = normalSphere( rayHit->hitPoint, i );
+				retVal = 1;
 			}
 		}	
 	}
+	return retVal;
 }
 
 /* Checks for intersection between a triangle and a ray */
-void triangle_intersect(RayHit * rayHit) {
+int triangle_intersect(RayHit * rayHit) {
 	float A, B, C, D, E, F, G, H, I, J, K, L, M, beta, gamma, time0;
+	int retVal = 0;
 	for( int i = 0; i < triangle_index; i++) {
 		triangle temp = tri[i];
 		A = temp.posA.x - temp.posB.x;
@@ -173,28 +188,56 @@ void triangle_intersect(RayHit * rayHit) {
 		if( rayHit->time > time0 ) {
 			rayHit->color = tri[i].mat.color;
 			rayHit->time = time0;
+			rayHit->reflective = tri[i].mat.reflective;
+			rayHit->hitPoint = vec3_add(rayHit->ray.posn, scalar_mult(rayHit->time, rayHit->ray.vector));
+			retVal = 1;
 		}
-
 	}
+	return retVal;
 }
 
 /* Returns a Ray to use with something. */
-void GetRay(Perspective p, vec2f screenCoord, Ray *newRay){
+void GetInitialRay(Perspective p, vec2f screenCoord, Ray *newRay){
 
 	// Calculate the exact location of the middle of the pixel (offset of .5 * units_per_pixel)
 	newRay->vector = normalize(vec3((-1 + screenCoord.x*p.units_per_pixel + .5 * p.units_per_pixel), (1 - screenCoord.y * p.units_per_pixel - .5 * p.units_per_pixel), -2));
-	newRay->posn = screenCoord;
 
 }
 
-/* Get a normal to a sphere give a sphere index and the point on the sphere */
-vec3f normalSphere( vec3f coords, int sphereIndex ) {
-	if( sphereIndex > sphere_index) {
-		return vec3(0, 0, 0);
+/* Returns a number corresponding with the dot product of the light vector and the normal */
+float CheckShadows( Perspective per, RayHit * rayHit ) {
+	Ray tempRay;
+	memset(&tempRay, 0, sizeof(Ray));
+	
+	// Add a 'bump' to the hit/intersection point
+	vec3f normal = rayHit->normal;
+	vec3f newHitPoint = vec3( normal.x * 0.0002 + rayHit->hitPoint.x, normal.y * 0.0002 + rayHit->hitPoint.y, normal.z * 0.0002 + rayHit->hitPoint.z );
+	tempRay.posn = newHitPoint;
+	
+	// Find a ray from the point given to the direction of the light
+	tempRay.vector = normalize(vec3_sub(per.light_pos, newHitPoint));
+	
+	//Check if that ray intersects with any object
+	RayHit newRayHit;
+	newRayHit.ray = tempRay;
+	newRayHit.time = FLT_MAX;
+	
+	int intersect = sphere_intersect(&newRayHit);
+	intersect |= triangle_intersect(&newRayHit);
+	
+	// There was an intersection so we're in a shadow
+	if( intersect ) {
+		return 0.2;
+	} 
+	
+	// Ambient lighting scale
+	float temp = vec3_dot(tempRay.vector, rayHit->normal);
+	if( temp < 0.2 ) {
+		temp = 0.2;
 	}
-	vec3f center = sph[sphereIndex].pos;
-	vec3f result = normalize(vec3_sub(coords, center));
-	return result;
+	
+	
+	return temp;	
 }
 
 /*Main of the Program.*/
@@ -272,6 +315,7 @@ int main(int argc, char *argv[]){
 
 	//Our camera pos and perspective
 	Perspective myPer;
+	myPer.light_pos = vec3( 3, 5, -15 ); // light position
 	myPer.camera_pos = vec3(0,0,0); // Camera Pos
 	myPer.distance = -2; // 2 units from screen...
 	myPer.screen_width_world = 2; //Screen width in meters
@@ -283,9 +327,10 @@ int main(int argc, char *argv[]){
 		for(int y=0; y<width;y++){
 			//create a ray
 			Ray myRay;
+			myRay.posn = vec3(0, 0, 0); // Starting position of vector
 
 			//generate that ray
-			GetRay(myPer, vec2(x, y), &myRay);
+			GetInitialRay(myPer, vec2(x, y), &myRay);
 	
 			// Check for intersection
 			RayHit rayHit;
@@ -294,6 +339,14 @@ int main(int argc, char *argv[]){
 			rayHit.ray = myRay;
 			sphere_intersect(&rayHit);
 			triangle_intersect(&rayHit);
+			
+			// Scale the diffuse shading
+			float scale = CheckShadows(myPer, &rayHit );
+			//printf( "scale is %f\n", scale);
+			rayHit.color.x *= scale;
+			rayHit.color.y *= scale;
+			rayHit.color.z *= scale;			
+			
 
 			// Color the pixel by the right object
 			set_pixel_color(rayHit.color, vec2(x, y), arrayContainingImage, myPer.screen_width_pixels);

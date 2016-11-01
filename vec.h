@@ -32,4 +32,5 @@ vec3f vec3_sub(vec3f vecA, vec3f vecB);
 
 vec3f vec3_add(vec3f vecA, vec3f vecB);
 
+vec3f scalar_mult(float mult, vec3f vec);
 #endif

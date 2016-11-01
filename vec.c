@@ -53,3 +53,7 @@ vec3f vec3_sub(vec3f vecA, vec3f vecB) {
 vec3f vec3_add(vec3f vecA, vec3f vecB) {
 	return vec3(vecA.x+vecB.x, vecA.y+vecB.y, vecA.z + vecB.z);
 }
+
+vec3f scalar_mult(float mult, vec3f vec) {
+	return vec3(mult * vec.x, mult * vec.y, mult * vec.z);
+}
