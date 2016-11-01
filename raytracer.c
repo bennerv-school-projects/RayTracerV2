@@ -14,6 +14,7 @@
 #include "geom.h"
 #include "vec.h"
 
+int debug = 0;
 
 /* Ray structure */
 typedef struct {
@@ -77,8 +78,8 @@ void set_pixel_color(vec3f color, vec2f cord, unsigned char * array, int width){
 void referenceGeometry() {
 	
 	// create three spheres
-	sphere_new(vec3(0,0,-16), 2, &sph1, red);
-	sphere_new(vec3(3,-1,-14), 1, &sph2, red);
+	sphere_new(vec3(0,0,-16), 2, &sph1, refl);
+	sphere_new(vec3(3,-1,-14), 1, &sph2, refl);
 	sphere_new(vec3(-3,-1,-14), 1, &sph3, red);
 
 	// back wall
@@ -116,6 +117,18 @@ vec3f normalSphere( vec3f coords, int sphereIndex ) {
 	return result;
 }
 
+/* get a normal to a triangle given a triangle index */
+vec3f normalTriangle( int triangleIndex ) {
+	if( triangleIndex > triangle_index ) {
+		return vec3(0, 0, 0);
+	}
+	
+	vec3f vec1 = vec3_sub( tri[triangleIndex].posB, tri[triangleIndex].posA );
+	vec3f vec2 = vec3_sub( tri[triangleIndex].posB, tri[triangleIndex].posC );
+	return normalize(vec3_cross(vec2, vec1));
+
+}
+
 /* Checks for intersection between a triangle and a ray */
 int sphere_intersect(RayHit * rayHit) {
 
@@ -127,8 +140,8 @@ int sphere_intersect(RayHit * rayHit) {
 
 
 	for( int i = 0; i < sphere_index; i++) {
-		float front = vec3_dot(negate(rayHit->ray.vector), negate(sph[i].pos));
-		float second = pow(vec3_dot(rayHit->ray.vector, negate(sph[i].pos)), 2) - (vec3_dot(rayHit->ray.vector, rayHit->ray.vector) * (vec3_dot(negate(sph[i].pos), negate(sph[i].pos)) - pow(sph[i].radius, 2)));
+		float front = vec3_dot(negate(rayHit->ray.vector), vec3_sub(rayHit->ray.posn, sph[i].pos));
+		float second = pow(vec3_dot(rayHit->ray.vector, vec3_sub(rayHit->ray.posn, sph[i].pos)), 2) - (vec3_dot(rayHit->ray.vector, rayHit->ray.vector) * (vec3_dot(vec3_sub(rayHit->ray.posn, sph[i].pos), vec3_sub(rayHit->ray.posn, sph[i].pos)) - pow(sph[i].radius, 2)));
 
 		if( second < 0 ) {
 			//printf( "no solution" );
@@ -145,6 +158,13 @@ int sphere_intersect(RayHit * rayHit) {
 				rayHit->hitPoint = vec3_add(rayHit->ray.posn, scalar_mult(rayHit->time, rayHit->ray.vector));
 				rayHit->normal = normalSphere( rayHit->hitPoint, i );
 				retVal = 1;
+				if( debug ) {
+					printf("Intersected %d Sphere time %f, color %f %f %f hit point %f %f %f\n",
+						i, 
+						rayHit->time,
+						rayHit->color.x, rayHit->color.y, rayHit->color.z,
+						rayHit->hitPoint.x, rayHit->hitPoint.y, rayHit->hitPoint.z);
+				}
 			}
 		}	
 	}
@@ -166,9 +186,12 @@ int triangle_intersect(RayHit * rayHit) {
 		G = rayHit->ray.vector.x;
 		H = rayHit->ray.vector.y;
 		I = rayHit->ray.vector.z;
-		J = temp.posA.x - 0;
-		K = temp.posA.y - 0;
-		L = temp.posA.z - 0;
+		J = temp.posA.x - rayHit->ray.posn.x;
+		K = temp.posA.y - rayHit->ray.posn.y;
+		L = temp.posA.z - rayHit->ray.posn.z;
+		
+		
+		
 		
 		M = A * ( E * I - H * F) + B * ( G * F - D * I ) + C * ( D * H - E * G );	
 		time0 = (-1 * (F * (A * K - J * B) + E * (J * C - A * L) + D * ( B * L - K * C) )) / M;
@@ -190,7 +213,9 @@ int triangle_intersect(RayHit * rayHit) {
 			rayHit->time = time0;
 			rayHit->reflective = tri[i].mat.reflective;
 			rayHit->hitPoint = vec3_add(rayHit->ray.posn, scalar_mult(rayHit->time, rayHit->ray.vector));
+			rayHit->normal = normalTriangle(i);
 			retVal = 1;
+
 		}
 	}
 	return retVal;
@@ -215,20 +240,37 @@ float CheckShadows( Perspective per, RayHit * rayHit ) {
 	tempRay.posn = newHitPoint;
 	
 	// Find a ray from the point given to the direction of the light
-	tempRay.vector = normalize(vec3_sub(per.light_pos, newHitPoint));
+	tempRay.vector = vec3_sub(per.light_pos, newHitPoint);
+	tempRay.vector = normalize(tempRay.vector);
 	
 	//Check if that ray intersects with any object
 	RayHit newRayHit;
 	newRayHit.ray = tempRay;
 	newRayHit.time = FLT_MAX;
 	
+	if( debug ) {
+		printf("Shooting ray %f, %f, %f from point %f %f %f\n",
+			tempRay.vector.x, tempRay.vector.y, tempRay.vector.z,
+			tempRay.posn.x, tempRay.posn.y, tempRay.posn.z);
+	}
+	
 	int intersect = sphere_intersect(&newRayHit);
+	if (debug && intersect) {
+		printf("Sphere intersection\n");
+	}
+	
 	intersect |= triangle_intersect(&newRayHit);
 	
+
 	// There was an intersection so we're in a shadow
 	if( intersect ) {
+		if( debug ) {
+			printf( "intersection\n");
+		}
 		return 0.2;
 	} 
+	
+
 	
 	// Ambient lighting scale
 	float temp = vec3_dot(tempRay.vector, rayHit->normal);
@@ -236,6 +278,9 @@ float CheckShadows( Perspective per, RayHit * rayHit ) {
 		temp = 0.2;
 	}
 	
+	if(debug) {
+		printf("temp is %f\n", temp);
+	}
 	
 	return temp;	
 }
@@ -329,9 +374,15 @@ int main(int argc, char *argv[]){
 			Ray myRay;
 			myRay.posn = vec3(0, 0, 0); // Starting position of vector
 
+			if( x == 284 && y == 208 ) {
+				debug = 1;
+			} else {
+				debug = 0;
+			}
+			
 			//generate that ray
 			GetInitialRay(myPer, vec2(x, y), &myRay);
-	
+			
 			// Check for intersection
 			RayHit rayHit;
 			memset(&rayHit, 0, sizeof(RayHit));
@@ -341,12 +392,13 @@ int main(int argc, char *argv[]){
 			triangle_intersect(&rayHit);
 			
 			// Scale the diffuse shading
-			float scale = CheckShadows(myPer, &rayHit );
-			//printf( "scale is %f\n", scale);
-			rayHit.color.x *= scale;
-			rayHit.color.y *= scale;
-			rayHit.color.z *= scale;			
-			
+			if( !rayHit.reflective ) {
+				float scale = CheckShadows(myPer, &rayHit );
+				//printf( "scale is %f\n", scale);
+				rayHit.color.x *= scale;
+				rayHit.color.y *= scale;
+				rayHit.color.z *= scale;			
+			}
 
 			// Color the pixel by the right object
 			set_pixel_color(rayHit.color, vec2(x, y), arrayContainingImage, myPer.screen_width_pixels);

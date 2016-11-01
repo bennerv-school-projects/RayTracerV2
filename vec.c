@@ -57,3 +57,7 @@ vec3f vec3_add(vec3f vecA, vec3f vecB) {
 vec3f scalar_mult(float mult, vec3f vec) {
 	return vec3(mult * vec.x, mult * vec.y, mult * vec.z);
 }
+
+float distance(vec3f pointA, vec3f pointB) {
+	return sqrt(pow(pointB.x - pointA.x, 2) + pow(pointB.y - pointA.y, 2) + pow(pointB.z - pointA.z, 2));
+}
