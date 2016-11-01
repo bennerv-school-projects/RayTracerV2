@@ -1,0 +1,13 @@
+# Untracked files
+
+# ignore all .png files
+*.png
+
+# ignore all object files
+*.o
+
+# ignore the executable 
+ray
+
+# ignore all text files
+*.txt
