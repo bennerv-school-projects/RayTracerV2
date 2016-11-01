@@ -1,2 +1,2 @@
 # RayTracer
-Sevin and Ben's RayTracer Project CS4611
+Ben's RayTracer Project CS4611
