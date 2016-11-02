@@ -61,3 +61,11 @@ vec3f scalar_mult(float mult, vec3f vec) {
 float distance(vec3f pointA, vec3f pointB) {
 	return sqrt(pow(pointB.x - pointA.x, 2) + pow(pointB.y - pointA.y, 2) + pow(pointB.z - pointA.z, 2));
 }
+
+vec3f reflect(vec3f ray, vec3f norm) {
+	vec3f ret;
+	float temp = vec3_dot(ray, norm);
+	temp *= 2;
+	ret = normalize(vec3_sub(ray, scalar_mult(temp, norm)));	
+	return ret;
+}

@@ -36,4 +36,6 @@ vec3f scalar_mult(float mult, vec3f vec);
 
 float distance(vec3f pointA, vec3f pointB);
 
+vec3f reflect(vec3f ray, vec3f norm);
+
 #endif

@@ -251,28 +251,14 @@ float CheckShadows( Perspective per, RayHit * rayHit ) {
 	newRayHit.ray = tempRay;
 	newRayHit.time = FLT_MAX;
 	
-	if( debug ) {
-		printf("Shooting ray %f, %f, %f from point %f %f %f\n",
-			tempRay.vector.x, tempRay.vector.y, tempRay.vector.z,
-			tempRay.posn.x, tempRay.posn.y, tempRay.posn.z);
-	}
 	
 	int intersect = sphere_intersect(&newRayHit);
-	if (debug && intersect) {
-		printf("Sphere intersection\n");
-	}	
 	intersect |= triangle_intersect(&newRayHit);
 	
-
 	// There was an intersection so we're in a shadow
 	if( intersect ) {
-		if( debug ) {
-			printf( "intersection\n");
-		}
 		return 0.2;
 	} 
-	
-
 	
 	// Ambient lighting scale
 	float temp = vec3_dot(tempRay.vector, rayHit->normal);
@@ -280,11 +266,34 @@ float CheckShadows( Perspective per, RayHit * rayHit ) {
 		temp = 0.2;
 	}
 	
-	if(debug) {
-		printf("temp is %f\n", temp);
+	return temp;	
+}
+
+/* get the reflection color */
+void CheckReflection(RayHit * rayHit, int depth) {
+	// Base case color = black
+	if( depth == 10 ) {
+		rayHit->color = vec3(0, 0, 0);
+		return;
 	}
 	
-	return temp;	
+	// Get our reflection vector (and add in a 'bump')
+	rayHit->ray.vector = reflect(rayHit->ray.vector, rayHit->normal);
+	rayHit->ray.posn = vec3( rayHit->normal.x * 0.00002 + rayHit->hitPoint.x, 
+		rayHit->normal.y * 0.00002 + rayHit->hitPoint.y,
+		rayHit->normal.z * 0.00002 + rayHit->hitPoint.z );
+	rayHit->time = FLT_MAX;
+
+	
+	int intersect = sphere_intersect(rayHit);
+	intersect |= triangle_intersect(rayHit);
+	
+	// Continue recursion if we hit a reflective surface
+	if( intersect && rayHit->reflective ) {
+		CheckReflection( rayHit, depth + 1 );
+	} else {
+		return;
+	}
 }
 
 /*Main of the Program.*/
@@ -394,13 +403,15 @@ int main(int argc, char *argv[]){
 			triangle_intersect(&rayHit);
 			
 			// Scale the diffuse shading
-			if( !rayHit.reflective ) {
-				float scale = CheckShadows(myPer, &rayHit );
-				//printf( "scale is %f\n", scale);
-				rayHit.color.x *= scale;
-				rayHit.color.y *= scale;
-				rayHit.color.z *= scale;			
+			if( rayHit.reflective ) {
+				CheckReflection(&rayHit, 0);
 			}
+
+			float scale = CheckShadows(myPer, &rayHit );
+			//printf( "scale is %f\n", scale);
+			rayHit.color.x *= scale;
+			rayHit.color.y *= scale;
+			rayHit.color.z *= scale;			
 
 			// Color the pixel by the right object
 			set_pixel_color(rayHit.color, vec2(x, y), arrayContainingImage, myPer.screen_width_pixels);
