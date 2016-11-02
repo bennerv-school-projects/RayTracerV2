@@ -46,15 +46,31 @@ material red;
 material blue;
 material white;
 material green;
+material cream;
+material black;
 
 sphere sph1;
 sphere sph2;
 sphere sph3;
+sphere eye1;
+sphere eye2;
+sphere eye3;
+sphere eye4;
+
 triangle back1;
 triangle back2;
 triangle bot1;
 triangle bot2;
 triangle right;
+triangle right2;
+triangle left;
+triangle left2;
+triangle dress;
+triangle dress2;
+triangle mouth1;
+triangle mouth2;
+triangle mouth3;
+triangle mouth4;
 
 /* Gets the color of a pixel located at the given coordinate */
 vec3f get_pixel_color(vec2f cord, unsigned char * array, int width){
@@ -109,32 +125,74 @@ void referenceGeometry() {
 void nonReferenceGeometry() {
 	
 	// create three spheres
-	sphere_new(vec3(0,0,8), 2, &sph1, green);
-	sphere_new(vec3(3,-1,7), 1, &sph2, refl);
-	sphere_new(vec3(-3,-1,7), 1, &sph3, red);
+	sphere_new(vec3(0,0,-16), 2, &sph1, refl);
+	sphere_new(vec3(3,0,-14), .5, &sph2, cream);
+	sphere_new(vec3(-3,0,-14), .5, &sph3, cream);
+	sphere_new(vec3(-3.15, .1, -13.55), .1, &eye1, black);
+	sphere_new(vec3(-2.7, .1, -13.55), .1, &eye2, black);
+	sphere_new(vec3(3.15, .1, -13.55), .1, &eye3, black);
+	sphere_new(vec3(2.7, .1, -13.55), .1, &eye4, black);
 
 	// back wall
-	triangle_new(vec3(-8,-2,-10),
-	vec3(8,-2,-10),
-	vec3(8,10,-10), &back1,refl);
+	triangle_new(vec3(-8,-2,-20),
+	vec3(8,-2,-20),
+	vec3(8,5,-20), &back1,red);
 
-	triangle_new(vec3(-8,-2,-10),
-		vec3(8,10,-10),
-		vec3(-8,10,-10), &back2,refl);
+	triangle_new(vec3(-8,-2,-20),
+		vec3(8,5,-20),
+		vec3(-8,5,-20), &back2,red);
 
 	// floor	
-	triangle_new(vec3(-8,-2,10),
-		vec3(8,-2,5),
-		vec3(8,-2,10), &bot1,white);
+	triangle_new(vec3(-8,-2,-20),
+		vec3(8,-2,-10),
+		vec3(8,-2,-20), &bot1,white);
 	
-	triangle_new(vec3(-8,-2,10),
-		vec3(-8,-2,5),
-		vec3(8,-2,5), &bot2,white);
+	triangle_new(vec3(-8,-2,-20),
+		vec3(-8,-2,-10),
+		vec3(8,-2,-10), &bot2,white);
+	
+	// side walls
+	triangle_new(vec3(8, -2, -20),
+		vec3(8, -2, -10),
+		vec3(8, 5, -20), &right, red);
 		
-	// right red triangle
-	triangle_new(vec3(8,-2,10),
-		vec3(8,-2,5),
-		vec3(8,10,10), &right,red);
+	triangle_new(vec3(8, 5, -20),
+		vec3(8, -2, -10),
+		vec3(8, 5, -10), &right2, red);
+		
+	triangle_new(vec3(-8, -2, -20),
+		vec3(-8, -2, -10),
+		vec3(-8, 5, -20), &left, red);
+		
+	triangle_new(vec3(-8, 5, -20),
+		vec3(-8, -2, -10),
+		vec3(-8, 5, -10), &left2, red);
+		
+	// dresses/clothes
+	triangle_new(vec3(3, 0, -14),
+		vec3(3.5, -2, -14),
+		vec3(2.5, -2, -14), &dress, white);
+		
+	triangle_new(vec3(-3, 0, -14),
+		vec3(-3.5, -2, -14),
+		vec3(-2.5, -2, -14), &dress2, blue);
+		
+	//mouths
+	triangle_new(vec3(-3, -.1, -13.5),
+		vec3(-3, -.2, -13.5),
+		vec3(-2.8, -.2, -13.5), &mouth1, red);
+		
+	triangle_new(vec3(-3, -.1, -13.5),
+		vec3(-2.8, -.2, -13.5),
+		vec3(-2.8, -.1, -13.5), &mouth2, red);
+
+	triangle_new(vec3(3, -.1, -13.5),
+		vec3(2.8, -.2, -13.5),
+		vec3(3, -.2, -13.5), &mouth3, red);
+		
+	triangle_new(vec3(3, -.1, -13.5),
+		vec3(2.8, -.1, -13.5),
+		vec3(2.8, -.2, -13.5), &mouth4, red);
 	
 }
 
@@ -320,11 +378,11 @@ void CheckReflection(RayHit * rayHit, int depth) {
 	}
 }
 
-/*Main of the Program.*/
+/* Main of the Program.*/
 int main(int argc, char *argv[]){
 
-	int width = 512;
-	int height = 512;
+	int width = 2048;
+	int height = 2048;
 	char * imageFileName;
 	int isReference = 0;
 	int shouldFree = 0;
@@ -346,6 +404,12 @@ int main(int argc, char *argv[]){
 	
 	green.reflective = 0;
 	green.color = vec3(0, 255, 0);
+	
+	cream.reflective = 0;
+	cream.color = vec3(234,192,134);
+	
+	black.reflective = 0;
+	black.color = vec3(0, 0, 0);
 	
 	// Not enough command line arguments
 	if( argc < 2 ) {
@@ -404,7 +468,7 @@ int main(int argc, char *argv[]){
 		referenceGeometry();
 	} else {
 		nonReferenceGeometry();
-		myPer.light_pos = vec3(-3, 5, 5);
+		myPer.light_pos = vec3(0, 8, 0);
 	}
 
 	// Go through all the pixels on the screen
