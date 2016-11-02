@@ -14,8 +14,6 @@
 #include "geom.h"
 #include "vec.h"
 
-int debug = 0;
-
 /* Ray structure */
 typedef struct {
    vec3f vector; // Ray vector ( should be normalized )
@@ -171,7 +169,7 @@ int sphere_intersect(RayHit * rayHit) {
 	float trueTime;
 	rayHit->color = vec3(0, 0, 0);
 
-
+	// Go through each of the sphere intersections
 	for( int i = 0; i < sphere_index; i++) {
 		float front = vec3_dot(negate(rayHit->ray.vector), vec3_sub(rayHit->ray.posn, sph[i].pos));
 		float second = pow(vec3_dot(rayHit->ray.vector, vec3_sub(rayHit->ray.posn, sph[i].pos)), 2) - (vec3_dot(rayHit->ray.vector, rayHit->ray.vector) * (vec3_dot(vec3_sub(rayHit->ray.posn, sph[i].pos), vec3_sub(rayHit->ray.posn, sph[i].pos)) - pow(sph[i].radius, 2)));
@@ -182,15 +180,14 @@ int sphere_intersect(RayHit * rayHit) {
 			second = sqrt(second);
 			time0 = (front + second) / vec3_dot(rayHit->ray.vector, rayHit->ray.vector);
 			time1 = (front - second) / vec3_dot(rayHit->ray.vector, rayHit->ray.vector);
+			
 			if( time0 < 0 && time1 < 0 ) {
-				return retVal;
-				if( debug ) {
-					printf("BAD VALUES\n");
-				}
+				retVal = 0;
+				continue;
 			}
 			
 			trueTime = time0 < time1 ? time0 : time1;
-			if( trueTime < rayHit->time || rayHit->time < 0 ) {
+			if( trueTime < rayHit->time ) {
 				rayHit->time = trueTime;
 				rayHit->color = sph[i].mat.color;
 				rayHit->reflective = sph[i].mat.reflective;
@@ -220,13 +217,10 @@ int triangle_intersect(RayHit * rayHit) {
 		I = rayHit->ray.vector.z;
 		J = temp.posA.x - rayHit->ray.posn.x;
 		K = temp.posA.y - rayHit->ray.posn.y;
-		L = temp.posA.z - rayHit->ray.posn.z;
-		
-		
-		
-		
+		L = temp.posA.z - rayHit->ray.posn.z;		
 		M = A * ( E * I - H * F) + B * ( G * F - D * I ) + C * ( D * H - E * G );	
 		time0 = (-1 * (F * (A * K - J * B) + E * (J * C - A * L) + D * ( B * L - K * C) )) / M;
+		
 		if( time0 < 0  ) {
 			continue;
 		}
@@ -282,7 +276,6 @@ float CheckShadows( Perspective per, RayHit * rayHit ) {
 	newRayHit.ray = tempRay;
 	newRayHit.time = FLT_MAX;
 	
-	
 	int intersect = sphere_intersect(&newRayHit);
 	intersect |= triangle_intersect(&newRayHit);
 	
@@ -317,9 +310,6 @@ void CheckReflection(RayHit * rayHit, int depth) {
 
 	
 	int intersect = sphere_intersect(rayHit);
-	if( debug ) {
-		printf("sphere intersection is %d\n", intersect);
-	}
 	intersect |= triangle_intersect(rayHit);
 	
 	// Continue recursion if we hit a reflective surface
@@ -380,7 +370,7 @@ int main(int argc, char *argv[]){
 		}
 		
 		// Offset for adding in the .png extension
-		if( offset + 3 > 50 ) {
+		if( offset + 3 > 49 ) {
 			printf("Specified a file name too long.  Exiting\n");
 		}
 		
@@ -423,12 +413,6 @@ int main(int argc, char *argv[]){
 			//create a ray
 			Ray myRay;
 			myRay.posn = vec3(0, 0, 0); // Starting position of vector
-
-			if( x > 200 && x < 230 && y > 250 && y < 290 ) {
-				debug = 1;
-			} else {
-				debug = 0;
-			}
 			
 			//generate that ray
 			GetInitialRay(myPer, vec2(x, y), &myRay);
@@ -447,7 +431,6 @@ int main(int argc, char *argv[]){
 			}
 
 			float scale = CheckShadows(myPer, &rayHit );
-			//printf( "scale is %f\n", scale);
 			rayHit.color.x *= scale;
 			rayHit.color.y *= scale;
 			rayHit.color.z *= scale;			
