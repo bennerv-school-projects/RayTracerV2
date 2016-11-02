@@ -149,6 +149,9 @@ int sphere_intersect(RayHit * rayHit) {
 			second = sqrt(second);
 			time0 = (front + second) / vec3_dot(rayHit->ray.vector, rayHit->ray.vector);
 			time1 = (front - second) / vec3_dot(rayHit->ray.vector, rayHit->ray.vector);
+			if( time0 < 0 && time1 < 0 ) {
+				return retVal;
+			}
 			
 			trueTime = time0 < time1 ? time0 : time1;
 			if( trueTime < rayHit->time || rayHit->time < 0 ) {
@@ -236,7 +239,7 @@ float CheckShadows( Perspective per, RayHit * rayHit ) {
 	
 	// Add a 'bump' to the hit/intersection point
 	vec3f normal = rayHit->normal;
-	vec3f newHitPoint = vec3( normal.x * 0.0002 + rayHit->hitPoint.x, normal.y * 0.0002 + rayHit->hitPoint.y, normal.z * 0.0002 + rayHit->hitPoint.z );
+	vec3f newHitPoint = vec3( normal.x * 0.00002 + rayHit->hitPoint.x, normal.y * 0.00002 + rayHit->hitPoint.y, normal.z * 0.00002 + rayHit->hitPoint.z );
 	tempRay.posn = newHitPoint;
 	
 	// Find a ray from the point given to the direction of the light
@@ -257,8 +260,7 @@ float CheckShadows( Perspective per, RayHit * rayHit ) {
 	int intersect = sphere_intersect(&newRayHit);
 	if (debug && intersect) {
 		printf("Sphere intersection\n");
-	}
-	
+	}	
 	intersect |= triangle_intersect(&newRayHit);
 	
 
@@ -288,8 +290,8 @@ float CheckShadows( Perspective per, RayHit * rayHit ) {
 /*Main of the Program.*/
 int main(int argc, char *argv[]){
 
-	int width = 512;
-	int height = 512;
+	int width = 1024;
+	int height = 1024;
 	char * imageFileName;
 	int isReference = 0;
 	int shouldFree = 0;
@@ -374,7 +376,7 @@ int main(int argc, char *argv[]){
 			Ray myRay;
 			myRay.posn = vec3(0, 0, 0); // Starting position of vector
 
-			if( x == 284 && y == 208 ) {
+			if( x == 166 && y == 272 ) {
 				debug = 1;
 			} else {
 				debug = 0;
