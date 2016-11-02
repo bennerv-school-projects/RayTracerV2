@@ -381,8 +381,8 @@ void CheckReflection(RayHit * rayHit, int depth) {
 /* Main of the Program.*/
 int main(int argc, char *argv[]){
 
-	int width = 2048;
-	int height = 2048;
+	int width = 512;
+	int height = 512;
 	char * imageFileName;
 	int isReference = 0;
 	int shouldFree = 0;
