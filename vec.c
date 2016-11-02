@@ -35,7 +35,6 @@ vec3f vec3_cross(vec3f vecA, vec3f vecB){
 vec3f normalize(vec3f vector) {
 	float norm = sqrt(powf(vector.x, 2) + powf(vector.y, 2) + powf(vector.z, 2));
 	if( norm == 0 ) {
-		printf("ERROR\n");
 		return vector;
 	}
 	vec3f new_vec = vec3(vector.x / norm, vector.y / norm, vector.z / norm);

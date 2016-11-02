@@ -47,6 +47,7 @@ material refl;
 material red;
 material blue;
 material white;
+material green;
 
 sphere sph1;
 sphere sph2;
@@ -107,6 +108,38 @@ void referenceGeometry() {
 
 }
 
+void nonReferenceGeometry() {
+	
+	// create three spheres
+	sphere_new(vec3(0,0,8), 2, &sph1, green);
+	sphere_new(vec3(3,-1,7), 1, &sph2, refl);
+	sphere_new(vec3(-3,-1,7), 1, &sph3, red);
+
+	// back wall
+	triangle_new(vec3(-8,-2,-10),
+	vec3(8,-2,-10),
+	vec3(8,10,-10), &back1,refl);
+
+	triangle_new(vec3(-8,-2,-10),
+		vec3(8,10,-10),
+		vec3(-8,10,-10), &back2,refl);
+
+	// floor	
+	triangle_new(vec3(-8,-2,10),
+		vec3(8,-2,5),
+		vec3(8,-2,10), &bot1,white);
+	
+	triangle_new(vec3(-8,-2,10),
+		vec3(-8,-2,5),
+		vec3(8,-2,5), &bot2,white);
+		
+	// right red triangle
+	triangle_new(vec3(8,-2,10),
+		vec3(8,-2,5),
+		vec3(8,10,10), &right,red);
+	
+}
+
 /* Get a normal to a sphere give a sphere index and the point on the sphere */
 vec3f normalSphere( vec3f coords, int sphereIndex ) {
 	if( sphereIndex > sphere_index) {
@@ -151,6 +184,9 @@ int sphere_intersect(RayHit * rayHit) {
 			time1 = (front - second) / vec3_dot(rayHit->ray.vector, rayHit->ray.vector);
 			if( time0 < 0 && time1 < 0 ) {
 				return retVal;
+				if( debug ) {
+					printf("BAD VALUES\n");
+				}
 			}
 			
 			trueTime = time0 < time1 ? time0 : time1;
@@ -161,13 +197,6 @@ int sphere_intersect(RayHit * rayHit) {
 				rayHit->hitPoint = vec3_add(rayHit->ray.posn, scalar_mult(rayHit->time, rayHit->ray.vector));
 				rayHit->normal = normalSphere( rayHit->hitPoint, i );
 				retVal = 1;
-				if( debug ) {
-					printf("Intersected %d Sphere time %f, color %f %f %f hit point %f %f %f\n",
-						i, 
-						rayHit->time,
-						rayHit->color.x, rayHit->color.y, rayHit->color.z,
-						rayHit->hitPoint.x, rayHit->hitPoint.y, rayHit->hitPoint.z);
-				}
 			}
 		}	
 	}
@@ -239,7 +268,9 @@ float CheckShadows( Perspective per, RayHit * rayHit ) {
 	
 	// Add a 'bump' to the hit/intersection point
 	vec3f normal = rayHit->normal;
-	vec3f newHitPoint = vec3( normal.x * 0.00002 + rayHit->hitPoint.x, normal.y * 0.00002 + rayHit->hitPoint.y, normal.z * 0.00002 + rayHit->hitPoint.z );
+	vec3f newHitPoint = vec3( normal.x * 0.00005 + rayHit->hitPoint.x, 
+							  normal.y * 0.00005 + rayHit->hitPoint.y, 
+							  normal.z * 0.00005 + rayHit->hitPoint.z );
 	tempRay.posn = newHitPoint;
 	
 	// Find a ray from the point given to the direction of the light
@@ -279,13 +310,16 @@ void CheckReflection(RayHit * rayHit, int depth) {
 	
 	// Get our reflection vector (and add in a 'bump')
 	rayHit->ray.vector = reflect(rayHit->ray.vector, rayHit->normal);
-	rayHit->ray.posn = vec3( rayHit->normal.x * 0.00002 + rayHit->hitPoint.x, 
-		rayHit->normal.y * 0.00002 + rayHit->hitPoint.y,
-		rayHit->normal.z * 0.00002 + rayHit->hitPoint.z );
+	rayHit->ray.posn = vec3( rayHit->normal.x * 0.00005 + rayHit->hitPoint.x, 
+							 rayHit->normal.y * 0.00005 + rayHit->hitPoint.y,
+							 rayHit->normal.z * 0.00005 + rayHit->hitPoint.z );
 	rayHit->time = FLT_MAX;
 
 	
 	int intersect = sphere_intersect(rayHit);
+	if( debug ) {
+		printf("sphere intersection is %d\n", intersect);
+	}
 	intersect |= triangle_intersect(rayHit);
 	
 	// Continue recursion if we hit a reflective surface
@@ -299,8 +333,8 @@ void CheckReflection(RayHit * rayHit, int depth) {
 /*Main of the Program.*/
 int main(int argc, char *argv[]){
 
-	int width = 1024;
-	int height = 1024;
+	int width = 512;
+	int height = 512;
 	char * imageFileName;
 	int isReference = 0;
 	int shouldFree = 0;
@@ -319,6 +353,9 @@ int main(int argc, char *argv[]){
 
 	white.reflective = 0;
 	white.color = vec3(255,255,255);
+	
+	green.reflective = 0;
+	green.color = vec3(0, 255, 0);
 	
 	// Not enough command line arguments
 	if( argc < 2 ) {
@@ -362,13 +399,7 @@ int main(int argc, char *argv[]){
 		printf("Failed to allocate memory.  Exiting\n");
 		exit(10);
 	}
-
-	// Set up the reference geometry
-	if( isReference ) {
-		referenceGeometry();
-	}
-
-
+	
 	//Our camera pos and perspective
 	Perspective myPer;
 	myPer.light_pos = vec3( 3, 5, -15 ); // light position
@@ -378,6 +409,14 @@ int main(int argc, char *argv[]){
 	myPer.screen_width_pixels = width; //Screen width in pixels
 	myPer.units_per_pixel = ((float) myPer.screen_width_world)/myPer.screen_width_pixels;
 
+	// Set up the reference geometry
+	if( isReference ) {
+		referenceGeometry();
+	} else {
+		nonReferenceGeometry();
+		myPer.light_pos = vec3(-3, 5, 5);
+	}
+
 	// Go through all the pixels on the screen
 	for(int x = 0;x<height;x++){
 		for(int y=0; y<width;y++){
@@ -385,7 +424,7 @@ int main(int argc, char *argv[]){
 			Ray myRay;
 			myRay.posn = vec3(0, 0, 0); // Starting position of vector
 
-			if( x == 166 && y == 272 ) {
+			if( x > 200 && x < 230 && y > 250 && y < 290 ) {
 				debug = 1;
 			} else {
 				debug = 0;
