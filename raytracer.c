@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <math.h>
 #include <float.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -479,7 +478,7 @@ int main(int argc, char *argv[]){
 			myRay.posn = vec3(0, 0, 0); // Starting position of vector
 			
 			//generate that ray
-			GetInitialRay(myPer, vec2(x, y), &myRay);
+			GetInitialRay(myPer, vec2(y, x), &myRay);
 			
 			// Check for intersection
 			RayHit rayHit;
@@ -500,7 +499,7 @@ int main(int argc, char *argv[]){
 			rayHit.color.z *= scale;			
 
 			// Color the pixel by the right object
-			set_pixel_color(rayHit.color, vec2(x, y), arrayContainingImage, myPer.screen_width_pixels);
+			set_pixel_color(rayHit.color, vec2(y, x), arrayContainingImage, myPer.screen_width_pixels);
 					
 		}
 	}
